@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Subjects</title>
+
+  <style>
+    body {
+      background: url('https://coolbackgrounds.imgix.net/4lBzkVBmJ0qvFJ90SJHEdV/7645fc49f7f1fb4a8c31a94fc4c97f4d/black-particles-background.png?w=3840&q=60&auto=format,compress')
+                  no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+      font-family: "Segoe UI", sans-serif;
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: -1;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 2.3rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 35px;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .card {
+      background: rgba(17, 17, 17, 0.88);
+      padding: 28px 20px;
+      border-radius: 18px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.7);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-8px) scale(1.06);
+      box-shadow: 0 0 35px rgba(0, 229, 255, 1);
+    }
+
+    .card img {
+      width: 85px;
+      height: 85px;
+      object-fit: contain;
+      margin-bottom: 18px;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .card h3 {
+      font-size: 1.25rem;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Select Subject</h1>
+
+<div class="grid">
+
+  <div class="card" onclick="openQR('Data Structures')">
+    <img src="https://cdn-icons-png.flaticon.com/512/10169/10169744.png" alt="DS">
+    <h3>Data Structures</h3>
+  </div>
+
+  <div class="card" onclick="openQR('SQL')">
+    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968313.png" alt="SQL">
+    <h3>SQL</h3>
+  </div>
+
+  <div class="card" onclick="openQR('Java')">
+    <img src="https://cdn-icons-png.flaticon.com/512/226/226777.png" alt="Java">
+    <h3>Java</h3>
+  </div>
+
+  <div class="card" onclick="openQR('Python')">
+    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968350.png" alt="Python">
+    <h3>Python</h3>
+  </div>
+
+  <div class="card" onclick="openQR('Computer Networks')">
+    <img src="https://cdn-icons-png.flaticon.com/512/4299/4299956.png" alt="CN">
+    <h3>Computer Networks</h3>
+  </div>
+
+  <div class="card" onclick="openQR('Operating System')">
+    <img src="https://cdn-icons-png.flaticon.com/512/4248/4248443.png" alt="OS">
+    <h3>Operating System</h3>
+  </div>
+
+</div>
+
+<script>
+  function openQR(subject) {
+    window.location.href = `admin_qr.html?subject=${encodeURIComponent(subject)}`;
+  }
+</script>
+
+</body>
+</html>
