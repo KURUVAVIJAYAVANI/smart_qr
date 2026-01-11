@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student - QR Code Scan</title>
+
+  <!-- CSS Styles -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: url('https://media.gettyimages.com/id/1915806263/de/video/4k-social-networking-service-concept-communication-network.jpg?s=640x640&k=20&c=uVy7RVm9mIlAFIR3DBeY-rMSPbHnfvDcZ9j4Bfuteqk=') no-repeat center center fixed;
+      background-size: cover;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      color: #00f5ff;
+      font-weight: 800;
+      font-size: 3rem;
+      margin-bottom: 20px;
+      text-align: center;
+      text-shadow: 0 0 10px #00f5ff, 0 0 20px #00bfff;
+    }
+
+    .flip-btn {
+      background-color: rgba(0, 191, 255, 0.2);
+      border: 2px solid #00bfff;
+      color: #00e0ff;
+      font-weight: bold;
+      padding: 10px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: 0.3s ease;
+      text-shadow: 0 0 5px #00e0ff;
+    }
+
+    .flip-btn:hover {
+      background-color: #00bfff;
+      color: #000;
+    }
+
+    .scanner-container {
+      background: rgba(0, 0, 30, 0.6);
+      padding: 30px 20px;
+      border-radius: 20px;
+      border: 2px solid #00bfff;
+      box-shadow: 0 0 30px #00bfff;
+      width: 100%;
+      max-width: 480px;
+      color: #fff;
+      text-align: center;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 4/3;
+      border-radius: 16px;
+      background: #000;
+      border: 2px solid #00bfff;
+      margin-bottom: 15px;
+      box-shadow: 0 0 20px #00f5ff;
+    }
+
+    .scanner-text {
+      font-size: 1rem;
+      color: #cbeeff;
+      text-shadow: 0 0 5px #00bfff;
+    }
+
+    .confirmation-message {
+      font-size: 1.7rem;
+      color: #4caf50;
+      font-weight: bold;
+      margin-top: 10px;
+      text-shadow: 0 0 5px #4caf50;
+    }
+
+    .tick-icon {
+      font-size: 4rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #4caf50;
+    }
+
+    canvas { display: none; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.8rem; }
+      .flip-btn { padding: 8px 16px; }
+    }
+  </style>
+
+  <!-- JSQR Library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+
+<body>
+
+  <h1>Scan QR Code</h1>
+  <button class="flip-btn" onclick="flipCamera()">🔁 Flip Camera</button>
+
+  <div class="scanner-container" id="scanner">
+    <video id="video" autoplay playsinline></video>
+    <p class="scanner-text" id="scannerText">Align the QR code inside the frame</p>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const scannerText = document.getElementById("scannerText");
+    const scanner = document.getElementById("scanner");
+
+    let stream;
+    let scanning = true;
+    let useBackCamera = true;
+
+    // Start camera
+    function startCamera() {
+      stopCamera();
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useBackCamera ? "environment" : "user" }
+      })
+      .then(s => {
+        stream = s;
+        video.srcObject = s;
+        video.setAttribute("playsinline", true); // iOS support
+        video.play();
+        scanning = true;
+        requestAnimationFrame(scanFrame);
+      })
+      .catch(() => {
+        scannerText.textContent = "❌ Camera access denied";
+      });
+    }
+
+    function stopCamera() {
+      scanning = false;
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    }
+
+    function flipCamera() {
+      useBackCamera = !useBackCamera;
+      startCamera();
+    }
+
+    function scanFrame() {
+      if (!scanning) return;
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const qr = jsQR(imageData.data, canvas.width, canvas.height);
+
+        if (qr && qr.data) {
+          console.log("QR Data:", qr.data); // Debug
+          stopCamera();
+          const rollno = qr.data.trim().toLowerCase();
+
+          if (rollno.length > 0) {
+            markAttendance(rollno);
+          } else {
+            scannerText.textContent = "❌ Invalid QR Code";
+            startCamera();
+          }
+          return;
+        }
+      }
+      requestAnimationFrame(scanFrame);
+    }
+
+    function markAttendance(rollno) {
+      fetch("http://localhost:4000/mark-attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rollno })
+      })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
+      })
+     .then(data => {
+  scanner.innerHTML = `
+    <div class="tick-icon">✅</div>
+    <p class="confirmation-message">${data.message}</p>
+    <p class="scanner-text"><b>Roll:</b> ${data.roll}</p>
+  `;
+})
+
+      .catch(err => {
+        scanner.innerHTML = `
+          <p class="confirmation-message" style="color:red;">
+            ❌ ${err.message}
+          </p>
+        `;
+      });
+    }
+
+    window.onload = startCamera;
+  </script>
+
+</body>
+</html>
