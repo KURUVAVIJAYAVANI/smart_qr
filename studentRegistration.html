@@ -77,11 +77,6 @@
       font-size:0.9rem;
     }
   </style>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
@@ -89,14 +84,13 @@
     <h2>Student Registration</h2>
 
     <form id="registerForm">
+      <input type="text" id="rollno" placeholder="Roll Number" required>
       <input type="text" id="name" placeholder="Full Name" required>
-
       <input type="email" id="email" placeholder="Email (@gprec.ac.in)" 
              pattern="^[a-zA-Z0-9._%+-]+@gprec\.ac\.in$"
              title="Email must be a valid @gprec.ac.in address" required>
-
+      <input type="text" id="phone" placeholder="Phone Number" required>
       <input type="password" id="password" placeholder="Password" required>
-
       <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
 
       <button type="submit">Register</button>
@@ -109,63 +103,43 @@
   </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA7OMlPMAD-EbBokcTU3oEaExYUH-RgYrQ",
-  authDomain: "smartqr-attendance-v2.firebaseapp.com",
-  projectId: "smartqr-attendance-v2",
-  storageBucket: "smartqr-attendance-v2.appspot.com",
-  messagingSenderId: "780087067345",
-  appId: "1:780087067345:web:01eba7dc700f9adf05fbf0"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  const rollno = document.getElementById('rollno').value.trim();
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim().toLowerCase();
+  const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
   const errorMsg = document.getElementById('errorMsg');
 
-  // Password match check
   if(password !== confirmPassword){
     errorMsg.textContent = "❌ Passwords do not match!";
     return;
   }
 
   try {
-    // Check if email already exists in Firestore
-    const userExists = await db.collection('students')
-      .where('email', '==', email)
-      .get();
-
-    if(!userExists.empty){
-      errorMsg.textContent = "❌ This email is already registered!";
-      return;
-    }
-
-    // Create Firebase Auth user
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-    const user = userCredential.user;
-
-    // Save student info in Firestore
-    await db.collection('students').doc(user.uid).set({
-      uid: user.uid,
-      name,
-      email
+    const response = await fetch("http://localhost:4000/api/students/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rollno, name, email, phone, password })
     });
 
-    alert("🎉 Registration successful!");
-    window.location.href = "studentLogin.html";
-
+    const result = await response.json();
+    if(result.success){
+      alert("🎉 Registration successful!");
+      window.location.href = "studentLogin.html";
+    } else {
+      errorMsg.textContent = "❌ " + result.message;
+    }
   } catch(err){
-    errorMsg.textContent = "❌ " + err.message;
+    console.error(err);
+    errorMsg.textContent = "❌ Error connecting to server!";
   }
 });
 </script>
 
 </body>
 </html>
+
