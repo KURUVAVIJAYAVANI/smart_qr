@@ -44,6 +44,7 @@
       font-size:1rem; 
       outline:none; 
     }
+
     input::placeholder { 
       color: rgba(0,245,255,0.4); 
     }
@@ -61,6 +62,7 @@
       cursor:pointer; 
       transition:0.3s; 
     }
+
     button:hover { 
       background:#00f5ff; 
       color:#000; 
@@ -73,13 +75,12 @@
       font-size:0.9rem; 
     }
 
-    /* Options row */
     .options-row {
       display:flex;
       justify-content:space-between;
       align-items:center;
       width:90%;
-      margin:20px auto 0 auto;
+      margin:20px auto 0;
     }
 
     .show-pass {
@@ -95,102 +96,84 @@
       color:#00f5ff;
       text-decoration:underline;
     }
-    .forgot-link:hover {
-      color:#00a7ff;
-    }
   </style>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 
 <body>
-  <div class="container">
-    <h2>Student Login</h2>
 
-    <form id="loginForm">
-      <input type="email" id="email" placeholder="Email (@gprec.ac.in)" 
-             pattern="^[a-zA-Z0-9._%+-]+@gprec\.ac\.in$" 
-             title="Email must end with @gprec.ac.in" required>
+<div class="container">
+  <h2>Student Login</h2>
 
-      <input type="password" id="password" placeholder="Password" required>
+  <form id="loginForm" novalidate>
+    <!-- KEEPING EMAIL FIELD AS-IS (used as Roll No) -->
+    <input type="text" id="email"
+      placeholder="Roll Number"
+      required />
 
-      <button type="submit">Login</button>
+    <input type="password" id="password" placeholder="Password" required />
 
-      <div class="options-row">
-        <div class="show-pass">
-          <input type="checkbox" id="showPass">
-          <label for="showPass">Show Password</label>
-        </div>
+    <button type="submit">Login</button>
 
-        <span class="forgot-link" onclick="forgotPassword()">Forgot Password?</span>
+    <div class="options-row">
+      <div class="show-pass">
+        <input type="checkbox" id="showPass">
+        <label for="showPass">Show Password</label>
       </div>
+      <span class="forgot-link" onclick="forgotPassword()">Forgot Password?</span>
+    </div>
 
-      <p class="error" id="errorMsg"></p>
-    </form>
-  </div>
+    <p class="error" id="errorMsg"></p>
+  </form>
+</div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA7OMlPMAD-EbBokcTU3oEaExYUH-RgYrQ",
-  authDomain: "smartqr-attendance-v2.firebaseapp.com",
-  projectId: "smartqr-attendance-v2",
-  storageBucket: "smartqr-attendance-v2.appspot.com",
-  messagingSenderId: "780087067345",
-  appId: "1:780087067345:web:01eba7dc700f9adf05fbf0"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-/* LOGIN FUNCTION */
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const password = document.getElementById('password').value;
-  const errorMsg = document.getElementById('errorMsg');
+  const rollno = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const errorMsg = document.getElementById("errorMsg");
+
+  errorMsg.textContent = "";
+
+  // Password only UI-level check
+  if (password.length < 4) {
+    errorMsg.textContent = "❌ Invalid password";
+    return;
+  }
 
   try {
-    // Sign in directly using email & password
-    await auth.signInWithEmailAndPassword(email, password);
-    alert("🎉 Login Successful!");
+    const response = await fetch("http://localhost:4000/student-login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ rollno })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      errorMsg.textContent = "❌ " + data.message;
+      return;
+    }
+
+    alert("🎉 Login Successful");
     window.location.href = "student.html";
 
   } catch (err) {
-    errorMsg.textContent = "❌ Login failed: " + err.message;
+    errorMsg.textContent = "❌ Cannot connect to server";
   }
 });
 
-/* SHOW PASSWORD */
+// Show password
 document.getElementById("showPass").addEventListener("change", function () {
   document.getElementById("password").type = this.checked ? "text" : "password";
 });
 
-/* FORGOT PASSWORD */
-async function forgotPassword() {
-  const email = document.getElementById("email").value.trim().toLowerCase();
-
-  if (!email) {
-    alert("⚠️ Enter your email first!");
-    return;
-  }
-
-  if(!/@gprec\.ac\.in$/.test(email)){
-    alert("❌ Email must end with @gprec.ac.in");
-    return;
-  }
-
-  try {
-    await auth.sendPasswordResetEmail(email);
-    alert("📩 Password reset email sent to: " + email);
-
-  } catch (error) {
-    alert("❌ Error: " + error.message);
-  }
+// Disabled forgot password
+function forgotPassword() {
+  alert("⚠️ Password recovery is not enabled");
 }
 </script>
 
