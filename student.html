@@ -100,7 +100,7 @@
     }
   </style>
 
-  <!-- JSQR Library -->
+  <!-- jsQR Library -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 
@@ -111,7 +111,9 @@
 
   <div class="scanner-container" id="scanner">
     <video id="video" autoplay playsinline></video>
-    <p class="scanner-text" id="scannerText">Align the QR code inside the frame</p>
+    <p class="scanner-text" id="scannerText">
+      Align the QR code inside the frame
+    </p>
   </div>
 
   <canvas id="canvas"></canvas>
@@ -120,14 +122,16 @@
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    const scannerText = document.getElementById("scannerText");
     const scanner = document.getElementById("scanner");
+    const scannerText = document.getElementById("scannerText");
 
     let stream;
     let scanning = true;
     let useBackCamera = true;
 
-    // Start camera
+    // Replace with the subject you want to mark
+    const subject = localStorage.getItem("subject") || "java"; 
+
     function startCamera() {
       stopCamera();
       navigator.mediaDevices.getUserMedia({
@@ -136,7 +140,6 @@
       .then(s => {
         stream = s;
         video.srcObject = s;
-        video.setAttribute("playsinline", true); // iOS support
         video.play();
         scanning = true;
         requestAnimationFrame(scanFrame);
@@ -168,16 +171,9 @@
         const qr = jsQR(imageData.data, canvas.width, canvas.height);
 
         if (qr && qr.data) {
-          console.log("QR Data:", qr.data); // Debug
           stopCamera();
           const rollno = qr.data.trim().toLowerCase();
-
-          if (rollno.length > 0) {
-            markAttendance(rollno);
-          } else {
-            scannerText.textContent = "❌ Invalid QR Code";
-            startCamera();
-          }
+          if (rollno) markAttendance(rollno);
           return;
         }
       }
@@ -188,21 +184,24 @@
       fetch("http://localhost:4000/mark-attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rollno })
+        body: JSON.stringify({
+          rollno: rollno,
+          subject: subject
+        })
       })
       .then(async res => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
         return data;
       })
-     .then(data => {
-  scanner.innerHTML = `
-    <div class="tick-icon">✅</div>
-    <p class="confirmation-message">${data.message}</p>
-    <p class="scanner-text"><b>Roll:</b> ${data.roll}</p>
-  `;
-})
-
+      .then(() => {
+        scanner.innerHTML = `
+          <div class="tick-icon">✅</div>
+          <p class="confirmation-message">Attendance marked successfully</p>
+          <p class="scanner-text"><b>Roll Number:</b> ${rollno}</p>
+          <p class="scanner-text"><b>Subject:</b> ${subject}</p>
+        `;
+      })
       .catch(err => {
         scanner.innerHTML = `
           <p class="confirmation-message" style="color:red;">
