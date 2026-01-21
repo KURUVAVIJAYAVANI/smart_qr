@@ -43,10 +43,8 @@ body {
   border: 2px solid #00f5ff;
   background: transparent; color: #00f5ff;
   font-size: 1rem; border-radius: 8px; outline: none;
-  transition: 0.3s;
 }
 .input-field input::placeholder { color: rgba(0,245,255,0.3); }
-.input-field input:focus { box-shadow: 0 0 12px #00f5ff; }
 
 .login-btn {
   width: 100%; padding: 12px;
@@ -54,7 +52,6 @@ body {
   border: 2px solid #00f5ff;
   border-radius: 8px; font-size: 1rem; font-weight: bold;
   cursor: pointer; margin-top: 20px;
-  transition: all 0.3s ease;
 }
 .login-btn:hover {
   background: #00f5ff; color: #000; transform: scale(1.05);
@@ -67,18 +64,9 @@ body {
   color: #00f5ff; text-decoration: underline; cursor: pointer;
 }
 .error { color: #ff4b5c; font-size: 0.9rem; margin-top: 15px; }
-
-@media screen and (max-width: 480px) {
-  .login-container { padding: 30px 20px; }
-}
 </style>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
 </head>
+
 <body>
 <div class="circuit-bg"></div>
 
@@ -101,94 +89,65 @@ body {
       <label for="rememberMe">Remember Me</label>
     </div>
 
-    <div class="extra-options">
-      <a onclick="forgotPassword()">Forgot Password?</a>
-    </div>
-
     <div class="error" id="errorMsg"></div>
   </form>
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA7OMlPMAD-EbBokcTU3oEaExYUH-RgYrQ",
-  authDomain: "smartqr-attendance-v2.firebaseapp.com",
-  projectId: "smartqr-attendance-v2",
-  storageBucket: "smartqr-attendance-v2.appspot.com",
-  messagingSenderId: "780087067345",
-  appId: "1:780087067345:web:01eba7dc700f9adf05fbf0"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-// Forgot password function
-function forgotPassword() {
-  const email = document.getElementById('email').value.trim();
-  const errorMsg = document.getElementById('errorMsg');
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const errorMsg = document.getElementById("errorMsg");
 
-  if(!email){
-    errorMsg.textContent = "❌ Enter your email to reset password.";
+  errorMsg.textContent = "";
+
+  if (!email) {
+    errorMsg.textContent = "❌ Email required";
     return;
   }
 
-  auth.sendPasswordResetEmail(email)
-    .then(() => {
-      errorMsg.style.color = "#00ff90";
-      errorMsg.textContent = "✅ Password reset email sent! Check your inbox.";
-    })
-    .catch(err => {
-      errorMsg.style.color = "#ff4b5c";
-      if(err.code === "auth/user-not-found"){
-        errorMsg.textContent = "❌ No account found with this email.";
-      } else if(err.code === "auth/invalid-email"){
-        errorMsg.textContent = "❌ Invalid email address.";
-      } else {
-        errorMsg.textContent = "❌ " + err.message;
-      }
+  try {
+    // ✅ FIX: store fetch response
+    const res = await fetch("http://localhost:4000/teacher-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
     });
-}
 
-// Login function
-document.getElementById('loginForm').addEventListener('submit', (e) => {
-  e.preventDefault();
+    const data = await res.json();
 
-  const email    = document.getElementById('email').value.trim().toLowerCase();
-  const password = document.getElementById('password').value;
-  const errorMsg = document.getElementById('errorMsg');
+    if (!res.ok) {
+      errorMsg.textContent = "❌ " + data.message;
+      return;
+    }
 
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => {
-      // Remember me functionality
-      const rememberMe = document.getElementById('rememberMe').checked;
-      if(rememberMe){
-        localStorage.setItem('adminEmail', email);
-      } else {
-        localStorage.removeItem('adminEmail');
-      }
-      window.location.href = "admin_sub.html";
-    })
-    .catch(err => {
-      errorMsg.style.color = "#ff4b5c";
-      if(err.code === "auth/user-not-found"){
-        errorMsg.textContent = "❌ No account found with this email.";
-      } else if(err.code === "auth/wrong-password"){
-        errorMsg.textContent = "❌ Incorrect password.";
-      } else {
-        errorMsg.textContent = "❌ " + err.message;
-      }
-    });
+    // Remember Me
+    if (document.getElementById("rememberMe").checked) {
+      localStorage.setItem("adminEmail", email);
+    } else {
+      localStorage.removeItem("adminEmail");
+    }
+
+    alert("🎉 Admin login successful");
+    window.location.href = "admin_sub.html";
+
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    errorMsg.textContent = "❌ Server not reachable";
+  }
 });
 
-// Auto-fill email if remembered
-window.addEventListener('load', () => {
-  const savedEmail = localStorage.getItem('adminEmail');
-  if(savedEmail){
-    document.getElementById('email').value = savedEmail;
-    document.getElementById('rememberMe').checked = true;
+// Auto-fill remembered email
+window.addEventListener("load", () => {
+  const savedEmail = localStorage.getItem("adminEmail");
+  if (savedEmail) {
+    document.getElementById("email").value = savedEmail;
+    document.getElementById("rememberMe").checked = true;
   }
 });
 </script>
+
 
 </body>
 </html>
