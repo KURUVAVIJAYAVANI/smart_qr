@@ -107,7 +107,7 @@
   <form id="loginForm" novalidate>
     <!-- KEEPING EMAIL FIELD AS-IS (used as Roll No) -->
     <input type="text" id="email"
-      placeholder="Roll Number"
+      placeholder="Email"
       required />
 
     <input type="password" id="password" placeholder="Password" required />
@@ -144,12 +144,11 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 
   try {
     const response = await fetch("http://localhost:4000/student-login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ rollno })
-    });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email: rollno }) // sending as email
+});
+
 
     const data = await response.json();
 
