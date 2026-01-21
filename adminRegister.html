@@ -7,142 +7,150 @@
 
   <style>
     body {
-      font-family:'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       background: radial-gradient(circle at center, #000010 0%, #000020 100%);
-      color:#00f5ff;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      min-height:100vh;
+      color: #00f5ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
     }
     .container {
       background: rgba(0,0,30,0.65);
-      border:2px solid #00f5ff;
-      border-radius:20px;
-      padding:40px 30px;
-      width:90%;
-      max-width:400px;
-      text-align:center;
-      box-shadow:0 0 40px #00f5ff;
+      border: 2px solid #00f5ff;
+      border-radius: 20px;
+      padding: 40px 30px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 0 40px #00f5ff;
     }
     h2 {
-      margin-bottom:25px;
-      font-size:2rem;
-      text-shadow:0 0 10px #00f5ff;
+      margin-bottom: 25px;
+      font-size: 2rem;
+      text-shadow: 0 0 10px #00f5ff;
     }
     input {
-      width:90%;
-      padding:12px 16px;
-      margin:10px 0;
-      border:2px solid #00f5ff;
-      border-radius:8px;
-      background:transparent;
-      color:#00f5ff;
-      font-size:1rem;
-      outline:none;
+      width: 90%;
+      padding: 12px 16px;
+      margin: 10px 0;
+      border: 2px solid #00f5ff;
+      border-radius: 8px;
+      background: transparent;
+      color: #00f5ff;
+      font-size: 1rem;
+      outline: none;
     }
     input::placeholder {
       color: rgba(0,245,255,0.4);
     }
-    .login-link {
-      margin:10px 0;
-      font-size:0.9rem;
-    }
-    .login-link a {
-      color:#00f5ff;
-      text-decoration:underline;
-      cursor:pointer;
-    }
     button {
-      width:100%;
-      padding:12px;
-      margin-top:10px;
-      background:transparent;
-      color:#00f5ff;
-      border:2px solid #00f5ff;
-      border-radius:8px;
-      font-size:1rem;
-      font-weight:bold;
-      cursor:pointer;
-      transition:0.3s;
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      background: transparent;
+      color: #00f5ff;
+      border: 2px solid #00f5ff;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
     }
     button:hover {
-      background:#00f5ff;
-      color:#000;
-      transform:scale(1.05);
+      background: #00f5ff;
+      color: #000;
+      transform: scale(1.05);
+    }
+    .login-link {
+      margin-top: 12px;
+      font-size: 0.9rem;
+    }
+    .login-link a {
+      color: #00f5ff;
+      text-decoration: underline;
     }
     .error {
-      color:#ff4b5c;
-      margin-top:15px;
-      font-size:0.9rem;
+      color: #ff4b5c;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    .success {
+      color: #4cff7a;
+      margin-top: 15px;
+      font-size: 0.9rem;
     }
   </style>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
 </head>
+
 <body>
   <div class="container">
     <h2>Teacher Registration</h2>
 
     <form id="registerForm">
-      <input type="email" id="email" placeholder="Email" required>
+      <input type="text" id="name" placeholder="Full Name" required>
+      <input type="email" id="email" placeholder="Email Address" required>
+      <input type="tel" id="phone" placeholder="Phone Number" required>
       <input type="password" id="password" placeholder="Password" required>
       <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+
       <button type="submit">Register</button>
+
       <div class="login-link">
-        Already have an account? <a href="adminLogin.html">Login</a>
+        Already registered? <a href="adminLogin.html">Login</a>
       </div>
+
       <p class="error" id="errorMsg"></p>
+      <p class="success" id="successMsg"></p>
     </form>
   </div>
 
 <script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyA7OMlPMAD-EbBokcTU3oEaExYUH-RgYrQ",
-    authDomain: "smartqr-attendance-v2.firebaseapp.com",
-    projectId: "smartqr-attendance-v2",
-    storageBucket: "smartqr-attendance-v2.appspot.com",
-    messagingSenderId: "780087067345",
-    appId: "1:780087067345:web:01eba7dc700f9adf05fbf0"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  document.getElementById("registerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    const errorMsg = document.getElementById('errorMsg');
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
 
+    const errorMsg = document.getElementById("errorMsg");
+    const successMsg = document.getElementById("successMsg");
+
+    errorMsg.textContent = "";
+    successMsg.textContent = "";
+
+    // Password validation
     if (password !== confirmPassword) {
-      errorMsg.textContent = "❌ Passwords do not match!";
+      errorMsg.textContent = "❌ Passwords do not match";
       return;
     }
 
     try {
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      const user = userCredential.user;
-
-      // Save teacher info to Firestore
-      await db.collection('teachers').doc(user.uid).set({
-        uid: user.uid,
-        email
+      const res = await fetch("http://localhost:4000/api/teachers/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          password   // backend may store or ignore
+        })
       });
 
-      alert("🎉 Registration Successful!");
-      window.location.href = "adminLogin.html";
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorMsg.textContent = "❌ " + data.message;
+        return;
+      }
+
+      successMsg.textContent = "✅ " + data.message;
+      document.getElementById("registerForm").reset();
 
     } catch (err) {
-      errorMsg.textContent = "❌ " + err.message;
+      errorMsg.textContent = "❌ Server not reachable";
     }
   });
 </script>
