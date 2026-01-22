@@ -1,113 +1,244 @@
-// server.js
+const QRCode = require("qrcode");
 const express = require("express");
 const cors = require("cors");
+const mysql = require("mysql2");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
-const PORT = 4000;
+const PORT = 5001;
 
 app.use(cors());
 app.use(express.json());
 
 // ===============================
-// IN-MEMORY DATA STORES
+// SINGLE DATABASE CONNECTION
 // ===============================
-const activeQRSessions = {};
-const attendanceRecords = [];
+const db = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "Vani@1234", // your MySQL password
+  database: "smart_attendance"
+});
 
-// ===============================
-// SUBJECT LIST
-// ===============================
-const subjects = [
-  "Data Structures",
-  "SQL",
-  "Java",
-  "Python",
-  "Computer Networks",
-  "Operating System"
-];
-
-// ===============================
-// GET SUBJECTS
-// ===============================
-app.get("/subjects", (req, res) => res.json(subjects));
-
-// ===============================
-// START QR (initial start)
-// ===============================
-app.post("/start-qr", (req, res) => {
-  const { subject } = req.body;
-  if (!subject) return res.status(400).json({ message: "Subject required" });
-
-  const token = uuidv4();
-  activeQRSessions[subject] = { token, active: true, startedAt: new Date() };
-
-  console.log(`🟢 QR STARTED for ${subject}: ${token}`);
-  res.json({ subject, token });
+db.connect(err => {
+  if (err) return console.error("❌ MySQL connection failed:", err);
+  console.log("✅ MySQL Connected");
 });
 
 // ===============================
-// REFRESH QR (every 10s)
+// GLOBAL DATA
 // ===============================
-app.post("/refresh-qr", (req, res) => {
-  const { subject } = req.body;
-  const session = activeQRSessions[subject];
+const subjects = ["java", "python", "sql", "ds", "cn", "os"];
+const activeQRSessions = {};
 
-  if (!subject || !session || !session.active) {
-    return res.status(400).json({ message: "Invalid or inactive subject" });
+
+// ===============================
+// TEACHER REGISTRATION
+// ===============================
+app.post("/api/teachers/register", (req, res) => {
+  const { name, email, phone } = req.body;
+
+  // Validate input
+  if (!name || !email || !phone) {
+    return res.status(400).json({ message: "All fields required" });
   }
 
-  const token = uuidv4();
-  session.token = token;
-  session.startedAt = new Date();
+  // Trim and normalize inputs
+  const trimmedName = name.trim();
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedPhone = phone.trim();
 
-  console.log(`🔄 QR REFRESHED for ${subject}: ${token}`);
-  res.json({ subject, token });
+  const sql = `INSERT INTO teachers (name, email, phone) VALUES (?, ?, ?)`;
+
+  db.query(sql, [trimmedName, trimmedEmail, trimmedPhone], (err) => {
+    if (err) {
+      if (err.code === "ER_DUP_ENTRY") {
+        return res.status(409).json({ message: "Teacher already exists" });
+      }
+      return res.status(500).json({ message: "Database error", error: err });
+    }
+
+    res.json({ success: true, message: "Teacher registered successfully" });
+  });
+});
+
+// ===============================
+// TEACHER LOGIN
+// ===============================
+app.post("/teacher-login", (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  const trimmedEmail = email.trim().toLowerCase(); // normalize
+
+  const sql = "SELECT teacher_id, name, email, phone FROM admins WHERE email = ?";
+  db.query(sql, [trimmedEmail], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error", error: err });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "Teacher not found" });
+    }
+
+    // Email exists, allow login
+    res.json({ success: true, teacher: results[0], message: "Login successful" });
+  });
+});
+
+
+// ===============================
+// STUDENT REGISTRATION
+// ===============================
+app.post("/api/students/register", (req, res) => {
+  const { rollno, name, email, phone } = req.body;
+
+  if (!rollno || !name || !email || !phone)
+    return res.status(400).json({ message: "All fields required" });
+
+  const sql = `INSERT INTO students_attendance (rollno, name, email, phone) VALUES (?, ?, ?, ?)`;
+
+  db.query(sql, [rollno, name, email, phone], err => {
+    if (err) {
+      if (err.code === "ER_DUP_ENTRY")
+        return res.status(409).json({ message: "Student already exists" });
+      return res.status(500).json({ message: "DB error", error: err });
+    }
+    res.json({ success: true, message: "Student registered" });
+  });
+});
+
+// ===============================
+// STUDENT LOGIN
+// ===============================
+app.post("/student-login", (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  // Trim the email to remove extra spaces
+  const trimmedEmail = email.trim();
+
+  const sql = "SELECT * FROM students_attendance WHERE rollno = ?";
+  db.query(sql, [trimmedEmail], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error", error: err });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Email exists, allow login
+    res.json({ success: true, student: results[0], message: "Login successful" });
+  });
+});
+
+
+
+// ===============================
+// START QR / INCREMENT TOTAL
+// ===============================
+app.post("/start-qr", async (req, res) => {
+  let { subject } = req.body;
+  subject = subject.toLowerCase();   // ✅ ADD THIS
+
+  if (!subjects.includes(subject))
+    return res.status(400).json({ message: "Invalid subject" });
+
+  const token = uuidv4();
+  activeQRSessions[subject] = { token, active: true };
+
+  try {
+    const qrData = `${subject}-${token}`;
+    const qrImage = await QRCode.toDataURL(qrData);
+    res.json({ qrImage });           // ✅ IMPORTANT
+  } catch (err) {
+    res.status(500).json({ message: "QR generation failed" });
+  }
 });
 
 // ===============================
 // STOP QR
 // ===============================
 app.post("/stop-qr", (req, res) => {
-  const { subject } = req.body;
-  const session = activeQRSessions[subject];
+  let { subject } = req.body;
+  subject = subject.toLowerCase();   // ✅ ADD THIS
 
-  if (!subject || !session) return res.status(400).json({ message: "Invalid subject" });
+  if (activeQRSessions[subject])
+    activeQRSessions[subject].active = false;
 
-  session.active = false;
-  console.log(`🔴 QR STOPPED for ${subject}`);
   res.json({ message: "QR stopped" });
 });
+ 
+
+
+// ====================================refresh qr
+app.post("/refresh-qr", async (req, res) => {
+  let { subject } = req.body;
+  subject = subject.toLowerCase();   // ✅ ADD THIS
+
+  if (!activeQRSessions[subject]?.active)
+    return res.status(400).json({ message: "QR not active" });
+
+  const token = uuidv4();
+  activeQRSessions[subject].token = token;
+
+  const qrData = `${subject}-${token}`;
+  const qrImage = await QRCode.toDataURL(qrData);
+  res.json({ qrImage });
+});
+
 
 // ===============================
 // MARK ATTENDANCE
 // ===============================
-// MARK ATTENDANCE
-// MARK ATTENDANCE BY EMAIL
 app.post("/mark-attendance", (req, res) => {
-  const { email } = req.body;
+  const { rollno, subject } = req.body;
 
-  if (!email) return res.status(400).json({ message: "Email required" });
+  if (!rollno || !subjects.includes(subject))
+    return res.status(400).json({ message: "Invalid data" });
 
-  const now = new Date();
-  const record = {
-    email,
-    date: now.toLocaleDateString("en-IN"),
-    time: now.toLocaleTimeString("en-IN"),
-  };
+  const session = activeQRSessions[subject];
+  if (!session || !session.active)
+    return res.status(403).json({ message: "QR inactive" });
 
-  attendanceRecords.push(record);
-  console.log(`✅ ${email} marked at ${record.time}`);
+  const sql = `UPDATE students_attendance SET ${subject}_present = ${subject}_present + 1 WHERE rollno = ?`;
+  db.query(sql, [rollno], (err, result) => {
+    if (err) return res.status(500).json({ message: "DB error" });
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Student not found" });
 
-  res.json({ message: "Attendance marked", email });
+    res.json({ message: "Attendance marked" });
+  });
 });
 
 // ===============================
-// VIEW ATTENDANCE
+// GET ATTENDANCE RECORDS
 // ===============================
-app.get("/attendance-records", (req, res) => res.json(attendanceRecords));
+app.get("/attendance-records", (req, res) => {
+  let sql = "SELECT rollno, name, ";
+  sql += subjects
+    .map(s => `CONCAT(${s}_present,'/',${s}_total) AS ${s}`)
+    .join(", ");
+  sql += " FROM students_attendance ORDER BY rollno";
+
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: "DB error" });
+    res.json(rows);
+  });
+});
 
 // ===============================
 // SERVER START
 // ===============================
-app.listen(PORT, () => console.log(`🚀 Backend running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
