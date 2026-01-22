@@ -59,7 +59,12 @@
 <body>
 <h1 id="subjectTitle">Subject</h1>
 
-<div class="qr-box" id="qrBox">Click Start</div>
+<div class="qr-box" id="qrBox">
+  <img id="qr" alt="QR Code" style="width: 90%; height: 90%; object-fit: contain;">
+</div>
+
+
+
 <div id="countdown">Next QR in: 10s</div>
 
 <div class="btn-group">
@@ -77,73 +82,78 @@
   let isRunning = false;
   let time = 10;
 
-  async function generateQR() {
-    try {
-      const response = await fetch("http://localhost:4000/refresh-qr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject }),
-      });
-      const data = await response.json();
-      const token = data.token;
-
-      const qrBox = document.getElementById("qrBox");
-      qrBox.innerHTML = "";
-      QRCode.toCanvas(`${subject}:${token}`, { width: 480 }, (err, canvas) => {
-        if (!err) qrBox.appendChild(canvas);
-      });
-
-      time = 10;
-    } catch (err) {
-      document.getElementById("qrBox").innerHTML =
-        "<p style='color:red'>Failed to load QR</p>";
-      console.error(err);
-    }
-  }
-
-  async function startQR() {
-    if (isRunning) return;
-    isRunning = true;
-
-    document.getElementById("startBtn").disabled = true;
-    document.getElementById("stopBtn").disabled = false;
-
-    // Start session first
-    await fetch("http://localhost:4000/start-qr", {
+async function generateQR() {
+  try {
+    const response = await fetch("http://localhost:5001/refresh-qr", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subject }),
     });
+    const data = await response.json();
 
-    // Generate QR immediately
-    await generateQR();
+    const qrImg = document.getElementById("qr");
+    qrImg.src = data.qrImage; // base64 QR from backend
+    time = 10;
+  } catch (err) {
+    console.error("Failed to generate QR:", err);
+    document.getElementById("qr").src = ""; // clear image
+    document.getElementById("countdown").innerText = "Failed to load QR";
+  }
+}
 
-    // Countdown
+
+
+  async function startQR() {
+  if (isRunning) return;
+  isRunning = true;
+
+  document.getElementById("startBtn").disabled = true;
+  document.getElementById("stopBtn").disabled = false;
+
+  try {
+    const res = await fetch("http://localhost:5001/start-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject }),
+    });
+    const data = await res.json();
+
+    const qrImg = document.getElementById("qr");
+    qrImg.src = data.qrImage;
+
+    time = 10; // reset countdown
+
     countdownInterval = setInterval(() => {
       time--;
+      if (time < 0) time = 0;
       document.getElementById("countdown").innerText = `Next QR in: ${time}s`;
     }, 1000);
 
-    // Refresh QR every 10s
     qrInterval = setInterval(generateQR, 10000);
+  } catch (err) {
+    console.error("Failed to start QR:", err);
+    alert("Cannot start QR. Make sure backend is running.");
+    stopQR();
   }
+}
 
-  function stopQR() {
-    clearInterval(qrInterval);
-    clearInterval(countdownInterval);
-    isRunning = false;
 
-    // Stop session on backend
-    fetch("http://localhost:4000/stop-qr", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject }),
-    });
+ function stopQR() {
+  clearInterval(qrInterval);
+  clearInterval(countdownInterval);
+  isRunning = false;
 
-    document.getElementById("countdown").innerText = "QR stopped";
-    document.getElementById("startBtn").disabled = false;
-    document.getElementById("stopBtn").disabled = true;
-  }
+  fetch("http://localhost:5001/stop-qr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subject }),
+  }).catch(err => console.warn("Failed to stop QR session:", err));
+
+  document.getElementById("countdown").innerText = "QR stopped";
+  document.getElementById("startBtn").disabled = false;
+  document.getElementById("stopBtn").disabled = true;
+}
+
 </script>
 </body>
 </html>
