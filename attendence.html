@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Attendance Dashboard</title>
+
+<style>
+body{
+    background:#0f0f0f;
+    color:white;
+    font-family:Arial;
+}
+
+h2, h3{
+    text-align:center;
+}
+
+.controls{
+    text-align:center;
+    margin:20px;
+}
+
+select, input, button{
+    padding:8px;
+    margin:5px;
+    border-radius:6px;
+    border:none;
+}
+
+button{
+    background:#00c6ff;
+    cursor:pointer;
+}
+
+.result-box{
+    text-align:center;
+    margin:15px auto;
+    padding:10px;
+    border:2px solid #00c6ff;
+    width:250px;
+    border-radius:8px;
+}
+
+.table-container{
+    overflow-x:auto;
+    margin:20px;
+}
+
+table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:1000px;
+}
+
+th, td{
+    border:1px solid #444;
+    padding:8px;
+    text-align:center;
+}
+
+th{
+    background:#00c6ff;
+    color:black;
+}
+
+tr:nth-child(even){
+    background:#1a1a1a;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📊 Attendance Dashboard</h2>
+
+<!-- 🔥 SUBJECT + DATE FILTER -->
+<div class="controls">
+  <select id="subject">
+    <option value="java">Java</option>
+    <option value="python">Python</option>
+    <option value="sql">SQL</option>
+    <option value="ds">DS</option>
+    <option value="cn">CN</option>
+    <option value="os">OS</option>
+  </select>
+
+  <input type="date" id="date">
+
+  <button onclick="getAttendance()">Get Attendance</button>
+</div>
+
+<div class="result-box" id="result">
+  Students Present: 0
+</div>
+
+<!-- 👨‍🎓 Student Attendance -->
+<h3>👨‍🎓 Student Attendance Report</h3>
+
+<div class="table-container">
+<table id="attendanceTable">
+<tr>
+    <th>Roll No</th>
+    <th>Name</th>
+    <th>Email</th>
+    <th>Phone</th>
+    <th>Java</th>
+    <th>Python</th>
+    <th>SQL</th>
+    <th>DS</th>
+    <th>CN</th>
+    <th>OS</th>
+    <th>Overall %</th>
+</tr>
+</table>
+</div>
+
+<script>
+
+// 🔥 SUBJECT + DATE COUNT
+async function getAttendance() {
+  const subject = document.getElementById("subject").value;
+  const date = document.getElementById("date").value;
+  const result = document.getElementById("result");
+
+  if (!date) {
+    alert("Select date");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:5001/get-attendance-count", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ subject, date })
+    });
+
+    const data = await res.json();
+    result.innerText = `✅ Students Present: ${data.count ?? data.total ?? 0}`;
+
+  } catch {
+    result.innerText = "❌ Error fetching data";
+  }
+}
+
+
+// 🔥 LOAD STUDENT DATA ONLY
+async function loadStudents() {
+
+    try {
+        const res = await fetch("http://localhost:5001/view-students-attendance");
+        const data = await res.json();
+
+        const table = document.getElementById("attendanceTable");
+
+        table.innerHTML = `
+        <tr>
+            <th>Roll No</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Java</th>
+            <th>Python</th>
+            <th>SQL</th>
+            <th>DS</th>
+            <th>CN</th>
+            <th>OS</th>
+            <th>Overall %</th>
+        </tr>
+        `;
+
+        data.forEach(row => {
+
+            let total =
+                row.java_present +
+                row.python_present +
+                row.sql_present +
+                row.ds_present +
+                row.cn_present +
+                row.os_present;
+
+            let percent = ((total / 180) * 100).toFixed(2);
+
+            table.innerHTML += `
+            <tr>
+                <td>${row.rollno}</td>
+                <td>${row.name}</td>
+                <td>${row.email}</td>
+                <td>${row.phone}</td>
+                <td>${row.java_present}/30</td>
+                <td>${row.python_present}/30</td>
+                <td>${row.sql_present}/30</td>
+                <td>${row.ds_present}/30</td>
+                <td>${row.cn_present}/30</td>
+                <td>${row.os_present}/30</td>
+                <td>${percent}%</td>
+            </tr>
+            `;
+        });
+
+    } catch (err) {
+        console.error("Error loading students", err);
+    }
+}
+
+
+// 🚀 Load on start
+loadStudents();
+
+</script>
+
+</body>
+</html>
