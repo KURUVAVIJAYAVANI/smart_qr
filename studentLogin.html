@@ -107,7 +107,7 @@
   <form id="loginForm" novalidate>
     <!-- KEEPING EMAIL FIELD AS-IS (used as Roll No) -->
     <input type="text" id="email"
-      placeholder="Email"
+      placeholder="Roll Number"
       required />
 
     <input type="password" id="password" placeholder="Password" required />
@@ -143,7 +143,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   }
 
   try {
-    const response = await fetch("http://localhost:4000/student-login", {
+    const response = await fetch("http://localhost:5001/student-login", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ email: rollno }) // sending as email
@@ -156,9 +156,16 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       errorMsg.textContent = "❌ " + data.message;
       return;
     }
+    // Save roll number in localStorage
+localStorage.setItem("rollno", rollno);
 
-    alert("🎉 Login Successful");
-    window.location.href = "student.html";
+// (Optional) Save subject if needed
+localStorage.setItem("subject", "java");
+
+alert("🎉 Login Successful");
+window.location.href = "student.html";
+
+  
 
   } catch (err) {
     errorMsg.textContent = "❌ Cannot connect to server";
