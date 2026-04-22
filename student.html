@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Student - QR Code Scan</title>
 
-  <!-- CSS Styles -->
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,26 +25,37 @@
       font-weight: 800;
       font-size: 3rem;
       margin-bottom: 20px;
-      text-align: center;
       text-shadow: 0 0 10px #00f5ff, 0 0 20px #00bfff;
+    }
+
+    /* 🔴 Logout Button */
+    .logout-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 0, 0, 0.2);
+      border: 2px solid #ff4b5c;
+      color: #ff4b5c;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #ff4b5c;
+      color: #000;
     }
 
     .flip-btn {
       background-color: rgba(0, 191, 255, 0.2);
       border: 2px solid #00bfff;
       color: #00e0ff;
-      font-weight: bold;
       padding: 10px 20px;
       border-radius: 12px;
       margin-bottom: 20px;
       cursor: pointer;
-      transition: 0.3s ease;
-      text-shadow: 0 0 5px #00e0ff;
-    }
-
-    .flip-btn:hover {
-      background-color: #00bfff;
-      color: #000;
     }
 
     .scanner-container {
@@ -56,163 +66,158 @@
       box-shadow: 0 0 30px #00bfff;
       width: 100%;
       max-width: 480px;
-      color: #fff;
       text-align: center;
-      position: relative;
     }
 
     video {
       width: 100%;
       max-width: 420px;
-      aspect-ratio: 4/3;
       border-radius: 16px;
-      background: #000;
       border: 2px solid #00bfff;
       margin-bottom: 15px;
-      box-shadow: 0 0 20px #00f5ff;
-    }
-
-    .scanner-text {
-      font-size: 1rem;
-      color: #cbeeff;
-      text-shadow: 0 0 5px #00bfff;
     }
 
     .confirmation-message {
-      font-size: 1.7rem;
-      color: #4caf50;
-      font-weight: bold;
+      font-size: 1.5rem;
       margin-top: 10px;
-      text-shadow: 0 0 5px #4caf50;
-    }
-
-    .tick-icon {
-      font-size: 4rem;
-      margin-bottom: 10px;
-      text-shadow: 0 0 10px #4caf50;
     }
 
     canvas { display: none; }
-
-    @media (max-width: 600px) {
-      h1 { font-size: 1.8rem; }
-      .flip-btn { padding: 8px 16px; }
-    }
   </style>
 
-  <!-- jsQR Library -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 
 <body>
 
-  <h1>Scan QR Code</h1>
-  <button class="flip-btn" onclick="flipCamera()">🔁 Flip Camera</button>
+<!-- 🔴 Logout Button -->
+<button class="logout-btn" onclick="logout()">Logout</button>
 
-  <div class="scanner-container" id="scanner">
-    <video id="video" autoplay playsinline></video>
-    <p class="scanner-text" id="scannerText">
-      Align the QR code inside the frame
-    </p>
-  </div>
+<h1>Scan QR Code</h1>
+<button class="flip-btn" onclick="flipCamera()">Flip Camera</button>
 
-  <canvas id="canvas"></canvas>
+<div class="scanner-container" id="scanner">
+  <video id="video" autoplay playsinline></video>
+  <p id="scannerText">Align QR inside frame</p>
+</div>
 
-  <script>
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const scanner = document.getElementById("scanner");
-    const scannerText = document.getElementById("scannerText");
+<canvas id="canvas"></canvas>
 
-    let stream;
-    let scanning = true;
-    let useBackCamera = true;
+<script>
+/* 🔐 PROTECT PAGE */
+const rollno = localStorage.getItem("rollno");
 
-    // Replace with the subject you want to mark
-    const subject = localStorage.getItem("subject") || "java"; 
+if (!rollno) {
+  alert("Please login first");
+  window.location.href = "login.html";
+}
 
-    function startCamera() {
+/* CAMERA + QR */
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const scanner = document.getElementById("scanner");
+
+let stream;
+let scanning = true;
+let useBackCamera = true;
+
+function startCamera() {
+  stopCamera();
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: useBackCamera ? "environment" : "user" }
+  })
+  .then(s => {
+    stream = s;
+    video.srcObject = s;
+    video.play();
+    scanning = true;
+    requestAnimationFrame(scanFrame);
+  })
+  .catch(() => {
+    alert("Camera access denied");
+  });
+}
+
+function stopCamera() {
+  scanning = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+}
+
+function flipCamera() {
+  useBackCamera = !useBackCamera;
+  startCamera();
+}
+
+function scanFrame() {
+  if (!scanning) return;
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const qr = jsQR(imageData.data, canvas.width, canvas.height);
+
+    if (qr && qr.data) {
       stopCamera();
-      navigator.mediaDevices.getUserMedia({
-        video: { facingMode: useBackCamera ? "environment" : "user" }
-      })
-      .then(s => {
-        stream = s;
-        video.srcObject = s;
-        video.play();
-        scanning = true;
-        requestAnimationFrame(scanFrame);
-      })
-      .catch(() => {
-        scannerText.textContent = "❌ Camera access denied";
-      });
-    }
 
-    function stopCamera() {
-      scanning = false;
-      if (stream) stream.getTracks().forEach(t => t.stop());
-    }
+      const qrText = qr.data.trim();
+      const dashIndex = qrText.indexOf("-");
 
-    function flipCamera() {
-      useBackCamera = !useBackCamera;
-      startCamera();
-    }
-
-    function scanFrame() {
-      if (!scanning) return;
-
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const qr = jsQR(imageData.data, canvas.width, canvas.height);
-
-        if (qr && qr.data) {
-          stopCamera();
-          const rollno = qr.data.trim().toLowerCase();
-          if (rollno) markAttendance(rollno);
-          return;
-        }
+      if (dashIndex === -1) {
+        alert("Invalid QR");
+        return;
       }
-      requestAnimationFrame(scanFrame);
-    }
 
-    function markAttendance(rollno) {
-      fetch("http://localhost:4000/mark-attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rollno: rollno,
-          subject: subject
-        })
-      })
-      .then(async res => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        return data;
-      })
-      .then(() => {
-        scanner.innerHTML = `
-          <div class="tick-icon">✅</div>
-          <p class="confirmation-message">Attendance marked successfully</p>
-          <p class="scanner-text"><b>Roll Number:</b> ${rollno}</p>
-          <p class="scanner-text"><b>Subject:</b> ${subject}</p>
-        `;
-      })
-      .catch(err => {
-        scanner.innerHTML = `
-          <p class="confirmation-message" style="color:red;">
-            ❌ ${err.message}
-          </p>
-        `;
-      });
-    }
+      const subject = qrText.substring(0, dashIndex).toLowerCase();
+      const token = qrText;
 
-    window.onload = startCamera;
-  </script>
+      markAttendance(subject, token);
+      return;
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+function markAttendance(subject, token) {
+  fetch("http://localhost:5001/mark-attendance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      rollno: rollno,
+      subject: subject,
+      token: token
+    })
+  })
+  .then(async res => {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+    return data;
+  })
+  .then(data => {
+    if (data.message === "Attendance already marked today") {
+      scanner.innerHTML = `<p style="color:orange;">⚠️ ${data.message}</p>`;
+    } else {
+      scanner.innerHTML = `<h2>✅ ${data.message}</h2>`;
+    }
+  })
+  .catch(err => {
+    scanner.innerHTML = `<p style="color:red;">❌ ${err.message}</p>`;
+  });
+}
+
+/* 🔴 LOGOUT FUNCTION */
+function logout() {
+  stopCamera();
+  localStorage.clear();
+  alert("Logged out successfully");
+  window.location.href = "studentLogin.html";
+}
+
+window.onload = startCamera;
+</script>
 
 </body>
 </html>
