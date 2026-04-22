@@ -65,7 +65,7 @@
 
 
 
-<div id="countdown">Next QR in: 10s</div>
+<div id="countdown">Next QR in: 5s</div>
 
 <div class="btn-group">
   <button id="startBtn" onclick="startQR()">Start QR</button>
@@ -80,7 +80,7 @@
 
   let qrInterval, countdownInterval;
   let isRunning = false;
-  let time = 10;
+  let time = 5;
 
 async function generateQR() {
   try {
@@ -93,7 +93,7 @@ async function generateQR() {
 
     const qrImg = document.getElementById("qr");
     qrImg.src = data.qrImage; // base64 QR from backend
-    time = 10;
+    time = 5;
   } catch (err) {
     console.error("Failed to generate QR:", err);
     document.getElementById("qr").src = ""; // clear image
@@ -121,7 +121,7 @@ async function generateQR() {
     const qrImg = document.getElementById("qr");
     qrImg.src = data.qrImage;
 
-    time = 10; // reset countdown
+    time = 5; // reset countdown
 
     countdownInterval = setInterval(() => {
       time--;
@@ -129,7 +129,7 @@ async function generateQR() {
       document.getElementById("countdown").innerText = `Next QR in: ${time}s`;
     }, 1000);
 
-    qrInterval = setInterval(generateQR, 10000);
+    qrInterval = setInterval(generateQR, 5000);
   } catch (err) {
     console.error("Failed to start QR:", err);
     alert("Cannot start QR. Make sure backend is running.");
