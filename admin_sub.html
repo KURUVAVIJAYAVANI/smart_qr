@@ -69,6 +69,25 @@
       letter-spacing: 0.5px;
     }
 
+    /* Dashboard Button */
+    .dashboard-btn {
+      padding: 14px 30px;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(45deg, #00e5ff, #00ff99);
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 255, 200, 0.7);
+      transition: 0.3s;
+    }
+
+    .dashboard-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 35px rgba(0, 255, 200, 1);
+    }
+
     /* Responsive */
     @media (max-width: 900px) {
       .grid {
@@ -90,8 +109,8 @@
 
 <div class="grid">
 
-  <div class="card" onclick="openQR('Data Structures')">
-    <img src="https://cdn-icons-png.flaticon.com/512/10169/10169744.png" alt="DS">
+  <div class="card" onclick="openQR('DS')">
+    <img src="https://cdn-icons-png.flaticon.com/512/10169/10169744.png" alt="DSA">
     <h3>Data Structures</h3>
   </div>
 
@@ -110,21 +129,32 @@
     <h3>Python</h3>
   </div>
 
-  <div class="card" onclick="openQR('Computer Networks')">
+  <div class="card" onclick="openQR('CN')">
     <img src="https://cdn-icons-png.flaticon.com/512/4299/4299956.png" alt="CN">
     <h3>Computer Networks</h3>
   </div>
 
-  <div class="card" onclick="openQR('Operating System')">
+  <div class="card" onclick="openQR('OS')">
     <img src="https://cdn-icons-png.flaticon.com/512/4248/4248443.png" alt="OS">
     <h3>Operating System</h3>
   </div>
 
 </div>
 
+<!-- ✅ Added Dashboard Button -->
+<div style="text-align:center; margin-top:50px;">
+  <button class="dashboard-btn" onclick="goToDashboard()">
+    View Attendance Dashboard
+  </button>
+</div>
+
 <script>
   function openQR(subject) {
     window.location.href = `admin_qr.html?subject=${encodeURIComponent(subject)}`;
+  }
+
+  function goToDashboard() {
+    window.location.href = "attendence.html";
   }
 </script>
 
